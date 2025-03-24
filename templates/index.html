@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Python Code Executor</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/dracula.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/python/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closebrackets.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/indentation.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #282a36; color: #f8f8f2; }
+        #editor { height: 400px; border: 1px solid #44475a; }
+        
+        /* Larger Font for CodeMirror */
+        .CodeMirror { 
+            font-size: 18px; /* Increased font size */
+            height: 100%; 
+        }
+        
+        button { margin-top: 10px; padding: 10px 20px; background-color: #50fa7b; border: none; color: #282a36; cursor: pointer; }
+        button:hover { background-color: #6272a4; }
+        pre { background-color: #44475a; padding: 10px; border: 1px solid #6272a4; color: #f8f8f2; font-size: 16px; }
+    </style>
+</head>
+<body>
+    <h2>Run Python Code</h2>
+    <div id="editor"></div>
+    <button onclick="runCode()">Run Code</button>
+    <h3>Output:</h3>
+    <pre id="output">Waiting for output...</pre>
+
+    <script>
+        // Initialize CodeMirror editor with smart backspace and larger font
+        var editor = CodeMirror(document.getElementById("editor"), {
+            mode: "python",
+            theme: "dracula",
+            lineNumbers: true,
+            autoCloseBrackets: true,
+            matchBrackets: true,
+            indentUnit: 4,  // Indentation level (4 spaces for Python)
+            tabSize: 4,
+            smartIndent: true,
+            indentWithTabs: false,  // Use spaces, not tabs
+            extraKeys: {
+                "Backspace": function(cm) {
+                    var cursor = cm.getCursor();
+                    var line = cm.getLine(cursor.line);
+
+                    // Check if the cursor is at the start of an indentation level
+                    if (cursor.ch > 0 && line.slice(0, cursor.ch).trim() === "") {
+                        var indentSize = cm.getOption("indentUnit");
+                        var toDelete = cursor.ch % indentSize || indentSize;
+
+                        cm.replaceRange(
+                            "",
+                            { line: cursor.line, ch: cursor.ch - toDelete },
+                            { line: cursor.line, ch: cursor.ch }
+                        );
+                    } else {
+                        cm.execCommand("delCharBefore");
+                    }
+                }
+            }
+        });
+
+        function runCode() {
+            const code = editor.getValue();
+            fetch("/run", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ code: code })
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById("output").innerText = data.output || "No output";
+            })
+            .catch(error => console.error("Error:", error));
+        }
+    </script>
+</body>
+</html>
